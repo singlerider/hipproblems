@@ -13,5 +13,6 @@ setup(
         "tornado>=4.1",
         "gevent>=1.0.2",
         "redis>=2.10.3",
+        "grequests==0.3.0"
     ],
 )
