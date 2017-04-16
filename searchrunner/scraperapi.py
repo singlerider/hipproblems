@@ -10,7 +10,7 @@ class ScraperApiHandler(web.RequestHandler):
         if not scraper_cls:
             self.set_status(404)
             self.write({
-                "error": "Unkown provider",
+                "error": "Unknown provider",
             })
             return
 
