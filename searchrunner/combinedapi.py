@@ -1,10 +1,13 @@
 import json
 from operator import itemgetter
+import logging
 
 import grequests
 from searchrunner.scrapers import (COMBINED_API_PORT, PROVIDER_BASE_ROUTE,
                                    SCRAPER_MAP, REQUIRED_RESULT_KEYS)
 from tornado import gen, ioloop, web
+
+logger = logging.getLogger('combined_api')
 
 
 class CombinedApiHandler(web.RequestHandler):
@@ -51,21 +54,27 @@ class CombinedApiHandler(web.RequestHandler):
         for response in responses:  # one per provider => O(nm)
             if response:  # grequests can return None if target is down
                 if response.status_code == 200:
+                    logger.info("{0} - {1}".format(
+                        response.status_code, response.request.url))
 
                     try:
                         results = json.loads(response.content)["results"]  # m
                         for result in results:
                             if self.result_is_valid(result):
                                 combined_results.append(result)
+                                logger.info(result)
                             else:
                                 malformed_results.append(result)
-                    except (KeyError, AttributeError, ValueError):
-                        pass  # explicitly handle incorrect provider response
+                                logger.warning(result)
+                    except (KeyError, AttributeError, ValueError) as error:
+                        logger.error(error)
 
                 elif response.status_code == 404:
-                    pass  # explicitly handle provider error
+                    logger.error("{0} - {1}".format(
+                        response.status_code, response.request.url))
                 else:
-                    pass  # explicitly handle other response code errors
+                    logger.error("{0} - {1}".format(
+                        response.status_code, response.request.url))
                 response.close
 
         self.sort_in_place_by_agony(combined_results)  # Timsort => O(nlogn)
@@ -94,4 +103,11 @@ def run():
 
 
 if __name__ == "__main__":
+    logger.setLevel(logging.ERROR)  # change to INFO for explicit logs
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.propagate = False
     run()
