@@ -11,17 +11,39 @@ logger = logging.getLogger('combined_api')
 
 
 class CombinedApiHandler(web.RequestHandler):
+    """Handles combined response for provider API requests asynchronously."""
 
     def url_from_provider(self, provider):
+        """Create an HTTP address from a provider name.
+
+        Args:
+            provider (str): Name of travel itinerary provider.
+
+        Returns:
+            str: Formatted HTTP address string.
+        """
         provider_url = "{0}/scrapers/{1}".format(
             PROVIDER_BASE_ROUTE, provider.lower()
         )
         return provider_url
 
     def sort_in_place_by_agony(self, input_list):
+        """Modify original input list reference by sorting in ascending order.
+
+        Args:
+            input_list (list): Reference to serialized list of flight results.
+        """
         input_list.sort(key=itemgetter("agony"))
 
     def result_is_valid(self, result):
+        """Validate individual flight result from provider API response.
+
+        Args:
+            result (dict): Individual provider API response result.
+
+        Returns:
+            bool: True if result is valid, False otherwise.
+        """
         if type(result) == dict and (REQUIRED_RESULT_KEYS) <= set(result):
             return True
         else:
@@ -29,7 +51,27 @@ class CombinedApiHandler(web.RequestHandler):
 
     @gen.coroutine
     def get(self):
+        """Combine results of multiple provider API scrapes, maintaining
+            agony sort for all combined results.
 
+        Returns:
+            An HTTP response, containing a jsonified dict of a list results
+                and malformed results. An example of a successful response is:
+
+            {
+                "results": [
+                    {
+                        "agony": 1.8009004502251125, "price": 1999,
+                        "provider": "Priceline",
+                        "arrive_time": "2017-04-16T20:51:00",
+                        "flight_num": "UA1001",
+                        "depart_time": "2017-04-16T19:51:00"
+                    },
+                    ...
+                ],
+                "malformed_results": [...]
+            }
+        """
         combined_results = []
         malformed_results = []
         provider_urls = []
